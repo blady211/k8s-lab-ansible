@@ -1,0 +1,13 @@
+- import_tasks: rocky.yml
+  when: ansible_os_family == "RedHat"
+
+- import_tasks: ubuntu.yml
+  when: ansible_os_family == "Debian"     
+
+- name: Enable the kubelet service
+  systemd:
+    name: kubelet
+    enabled: yes
+    state: started   
+
+- import_tasks: metallb.yml      

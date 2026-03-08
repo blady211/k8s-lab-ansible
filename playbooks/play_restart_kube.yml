@@ -1,0 +1,13 @@
+---
+- name: Reset workers before join
+  hosts: workers
+  become: true
+
+  tasks:
+    - name: Reset previous kubeadm state
+      shell: kubeadm reset -f
+      ignore_errors: yes
+
+    - name: Join node to cluster
+      shell: |
+        sudo systemctl restart kubelet

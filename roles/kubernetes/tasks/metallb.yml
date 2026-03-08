@@ -1,0 +1,48 @@
+# Sprawdzamy czy namespace MetalLB już istnieje w klastrze
+# Jeśli istnieje → MetalLB jest już zainstalowany
+# Jeśli nie istnieje → playbook przejdzie do instalacji
+- name: Check if MetalLB namespace exists
+  command: kubectl get ns metallb-system
+  register: metallb_ns          # zapisujemy wynik polecenia w zmiennej metallb_ns
+  ignore_errors: true           # jeśli namespace nie istnieje, nie przerywaj playbooka
+  environment:
+    KUBECONFIG: /home/ansible/.kube/config   # wskazujemy kubeconfig aby kubectl mógł połączyć się z API server
+
+# Kopiujemy manifest instalacyjny MetalLB z roli Ansible
+# src = plik z katalogu roles/kubernetes/files/
+# dest = lokalizacja na hoście gdzie wykonuje się playbook
+- name: Copy MetalLB manifest
+  copy:
+    src: metallb-install.yaml
+    dest: /tmp/metallb-install.yaml
+    mode: '0644'
+  when: metallb_ns.rc != 0      # wykonaj tylko jeśli namespace nie istnieje
+
+# Instalujemy MetalLB w klastrze Kubernetes
+# kubectl apply utworzy:
+# - namespace metallb-system
+# - deployment controller
+# - daemonset speaker
+# - role RBAC
+- name: Install MetalLB
+  command: kubectl apply -f /tmp/metallb-install.yaml
+  when: metallb_ns.rc != 0      # wykonaj tylko przy pierwszej instalacji
+  environment:
+    KUBECONFIG: /home/ansible/.kube/config
+
+# Tworzymy konfigurację MetalLB z template
+# Template pozwala używać zmiennych Ansible (np. zakresu IP)
+# plik źródłowy: roles/kubernetes/templates/metallb-config.yaml.j2
+- name: Generate MetalLB config
+  template:
+    src: metallb-config.yaml.j2
+    dest: /tmp/metallb-config.yaml
+
+# Wgrywamy konfigurację MetalLB do klastra
+# Ten manifest tworzy:
+# - IPAddressPool (zakres adresów dla LoadBalancer)
+# - L2Advertisement (ogłaszanie IP w sieci)
+- name: Apply MetalLB config
+  command: kubectl apply -f /tmp/metallb-config.yaml
+  environment:
+    KUBECONFIG: /home/ansible/.kube/config
