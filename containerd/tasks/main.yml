@@ -1,0 +1,34 @@
+- import_tasks: rocky.yml
+  when: ansible_os_family == "RedHat"
+
+- import_tasks: ubuntu.yml
+  when: ansible_os_family == "Debian"
+
+- name: Ensure containerd config directory exists
+  file:
+    path: /etc/containerd
+    state: directory
+
+- name: Enable and start containerd
+  systemd:
+    name: containerd
+    enabled: true
+    state: started
+
+- name: Generate default containerd config
+  command: containerd config default
+  register: containerd_config
+  changed_when: false
+
+- name: Write containerd config
+  copy:
+    dest: /etc/containerd/config.toml
+    content: "{{ containerd_config.stdout }}"
+  notify: restart containerd
+
+- name: Enable SystemdCgroup for Kubernetes
+  replace:
+    path: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup = false'
+    replace: 'SystemdCgroup = true'
+  notify: restart containerd

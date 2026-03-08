@@ -1,0 +1,23 @@
+- name: Update Ubuntu Linux nodes
+  ansible.builtin.apt:
+    update_cache: yes
+    upgrade: dist
+    autoremove: yes
+    autoclean: yes
+- name: Upgrade system Ubuntu Linux nodes
+  ansible.builtin.apt:
+    upgrade: dist
+    state: latest
+- name: Install necessary packages on Ubuntu Linux nodes
+  ansible.builtin.apt:
+    name:
+      - vim
+      - net-tools
+      - curl
+      - wget
+      - git
+      - apt-transport-https
+      - ca-certificates
+      - software-properties-common
+      - bash-completion
+    state: present

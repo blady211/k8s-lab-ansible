@@ -1,0 +1,16 @@
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install containerd on ubuntu nodes
+  apt:
+    name: containerd
+    state: present
+
+- name: Create containerd configuration directory
+  file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+    owner: root
+    group: root 

@@ -1,0 +1,14 @@
+- name: Update Rocky Linux nodes
+  ansible.builtin.dnf:
+    name: "*"
+    state: latest
+- name: Install necessary packages on Rocky Linux nodes
+  ansible.builtin.dnf:
+    name:
+      - vim
+      - net-tools
+      - curl
+      - wget
+      - git
+      - bash-completion
+    state: present

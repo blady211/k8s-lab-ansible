@@ -1,0 +1,29 @@
+[rocky_nodes]
+
+rocky-node1-ansible-control ansible_host=192.168.0.100
+rocky-node2-registry ansible_host=192.168.0.101
+rocky-node3-worker ansible_host=192.168.0.102
+
+
+[ubuntu_nodes]
+
+ubuntu-node1-worker ansible_host=192.168.0.150
+ubuntu-node2-worker ansible_host=192.168.0.151
+ubuntu-node3-worker ansible_host=192.168.0.152
+
+
+[k8s_nodes:children]
+
+rocky_nodes
+ubuntu_nodes
+
+
+[k8s_nodes:vars]
+ansible_user=ansible
+ansible_become=true
+
+
+[k8s_nodes:vars]
+ansible_user=ansible
+#ansible_ssh_private_key_file=~/.ssh/k8keyssh - w przypadku wlasnego klucza
+ansible_become=true
