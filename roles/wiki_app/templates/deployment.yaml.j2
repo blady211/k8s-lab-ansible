@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wiki-site
+  namespace: default
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: wiki-site
+  template:
+    metadata:
+      labels:
+        app: wiki-site
+    spec:
+      containers:
+      - name: wiki
+        image: {{ registry_ip }}:5000/wiki-site:{{ image_tag }}
+        ports:
+        - containerPort: 80

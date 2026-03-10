@@ -1,0 +1,19 @@
+- name: Copy Grafana ingress manifest
+  copy:
+    src: grafana-ingress.yaml
+    dest: /tmp/grafana-ingress.yaml
+
+- name: Apply Grafana ingress
+  command: kubectl apply -f /tmp/grafana-ingress.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Copy Prometheus ingress manifest
+  copy:
+    src: prometheus-ingress.yaml
+    dest: /tmp/prometheus-ingress.yaml
+
+- name: Apply Prometheus ingress
+  command: kubectl apply -f /tmp/prometheus-ingress.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf

@@ -1,6 +1,9 @@
 [master]
 rocky-node1-ansible-control ansible_host=192.168.0.100
 
+[registry]
+rocky-node2-registry ansible_host=192.168.0.101
+
 [workers]
 rocky-node3-worker ansible_host=192.168.0.102
 ubuntu-node1-worker ansible_host=192.168.0.150

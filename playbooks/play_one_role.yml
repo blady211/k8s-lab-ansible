@@ -1,0 +1,5 @@
+- name: Run one role 
+  hosts: master
+  become: true
+  roles:
+    - wiki_app 

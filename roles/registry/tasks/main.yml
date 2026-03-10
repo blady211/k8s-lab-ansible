@@ -1,0 +1,71 @@
+- name: Install dnf config manager
+  dnf:
+    name: dnf-plugins-core
+    state: present
+
+- name: Add Docker repository
+  command: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+- name: Install Docker
+  dnf:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+- name: Start and enable Docker service
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Install pip
+  dnf:
+    name: python3-pip
+    state: present
+
+- name: Install python packaging library
+  dnf:
+    name: python3-packaging
+    state: present      
+
+- name: Install Docker Python SDK
+  pip:
+    name: docker
+
+- name: Configure Docker registry - insecure registry
+  copy:
+    dest: /etc/docker/daemon.json
+    content: |
+      {
+        "insecure-registries": ["192.168.0.101:5000"]
+      }
+- name: Restart Docker
+  service:
+    name: docker
+    state: restarted
+
+- name: Create registry data directory
+  file:
+    path: /opt/registry/data
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'  
+
+- name: Run registry container
+  docker_container:
+    name: registry
+    image: registry:2
+    state: started
+    restart_policy: always
+    published_ports:
+      - "5000:5000"
+    volumes:
+      - /opt/registry/data:/var/lib/registry
+
+- name: Check registry
+  uri:
+    url: http://192.168.0.101:5000/v2/_catalog
+    method: GET
+    status_code: 200  

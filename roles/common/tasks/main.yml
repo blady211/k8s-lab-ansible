@@ -8,6 +8,8 @@
   import_tasks: ubuntu.yml
   when: ansible_os_family == "Debian"
 
+- name: Import tasks for control node - helm instalation
+  import_tasks: helm_inst.yml
 
 - name: Disable swap on all nodes swampoff -a
   become: true

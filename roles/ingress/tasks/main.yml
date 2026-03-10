@@ -1,0 +1,39 @@
+- name: Instalacja NGINX Ingress
+  command: |
+    kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Sprawdzenie statusu NGINX Ingress Controller
+  command: |
+    kubectl get svc -n ingress-nginx
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf  
+  register: nginx_ingress_status
+
+- name: Wyświetlenie statusu NGINX Ingress Controller
+  debug:
+    var: nginx_ingress_status.stdout
+
+- name: Copy ingress manifest
+  copy:
+    src: ingress-wiki.yaml
+    dest: /tmp/ingress-wiki.yaml
+
+- name: Apply ingress manifest
+  command: |
+    kubectl apply -f /tmp/ingress-wiki.yaml
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf  
+  register: ingress_apply
+
+- name: Sprawdzenie statusu Ingress
+  command: |
+    kubectl get ingress -n wiki
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf  
+  register: ingress_status
+
+- name: Wyświetlenie statusu Ingress
+  debug:
+    var: ingress_status.stdout 

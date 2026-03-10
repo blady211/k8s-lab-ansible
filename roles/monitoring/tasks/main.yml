@@ -1,0 +1,25 @@
+- name: Check existing Helm releases
+  command: /usr/local/bin/helm list -n monitoring -q
+  register: helm_releases
+  changed_when: false
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  
+
+- name: Install monitoring stack
+  command: >
+    /usr/local/bin/helm install monitoring prometheus-community/kube-prometheus-stack
+    -n monitoring --create-namespace
+  when: "'monitoring' not in helm_releases.stdout"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Upgrade monitoring stack
+  command: >
+    /usr/local/bin/helm upgrade monitoring prometheus-community/kube-prometheus-stack
+    -n monitoring
+  when: "'monitoring' in helm_releases.stdout"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf 
+
+- import_tasks: ingress_monitoring.yml 

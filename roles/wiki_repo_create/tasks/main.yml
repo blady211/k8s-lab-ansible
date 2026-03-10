@@ -1,0 +1,21 @@
+- name: Clone wiki repository
+  git:
+    repo: git@github.com:blady211/wiki_site.git
+    dest: /opt/wiki_site
+    version: main
+    update: yes
+    force: yes
+
+- name: Build docker image
+  command: docker build -t wiki-site:1.0 .
+  args:
+    chdir: /opt/wiki_site/app
+
+- name: Tag image for registry
+  command: docker tag wiki-site:1.0 192.168.0.101:5000/wiki-site:1.0
+
+
+- name: Push image to registry
+  command: docker push 192.168.0.101:5000/wiki-site:1.0
+
+

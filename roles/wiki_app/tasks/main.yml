@@ -1,0 +1,18 @@
+- name: Render deployment manifest 
+  template: 
+    src: deployment.yaml.j2
+    dest: /tmp/wiki-deployment.yml
+
+- name: Copy service manifest from /tmp
+  copy:
+    src: service.yml
+    dest: /tmp/wiki-service.yml
+
+- name: Apply deployment for Wiki
+  command: kubectl apply -f /tmp/wiki-deployment.yml
+  environment:
+    KUBECONFIG: /home/ansible/.kube/config
+- name: Apply service for Wiki
+  command: kubectl apply -f /tmp/wiki-service.yml 
+  environment:
+    KUBECONFIG: /home/ansible/.kube/config  

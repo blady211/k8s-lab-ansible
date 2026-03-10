@@ -1,7 +1,33 @@
----
-- name: Prepare all nodes
-  hosts: master
+- name: Configure infrastructure for all nodes
+  hosts: all
   become: true
 
   roles:
-    - kubernetes
+    - role: common
+      tags: common
+
+    - role: kernel
+      tags: kernel
+
+    - role: containerd
+      tags: containerd
+
+    - role: registry
+      when: "'registry' in group_names"
+      tags: registry
+
+    - role: wiki_repo_create
+      when: "'registry' in group_names"
+      tags: wiki_repo
+
+    - role: wiki_app
+      when: "'master' in group_names"
+      tags: wiki
+
+    - role: ingress
+      when: "'master' in group_names"
+      tags: ingress
+
+    - role: monitoring
+      when: "'master' in group_names"
+      tags: monitoring

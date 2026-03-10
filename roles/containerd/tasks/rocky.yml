@@ -20,3 +20,18 @@
     mode: '0755'
     owner: root
     group: root 
+
+- name: Deploy containerd config for Rocky
+  copy:
+    src: config_rocky.toml
+    dest: /etc/containerd/config.toml
+    owner: root
+    group: root
+    mode: '0644'
+  notify: restart containerd
+
+- name: Enable and start containerd
+  systemd:
+    name: containerd
+    enabled: true
+    state: started

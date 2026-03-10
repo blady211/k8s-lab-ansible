@@ -4,31 +4,19 @@
 - import_tasks: ubuntu.yml
   when: ansible_os_family == "Debian"
 
-- name: Ensure containerd config directory exists
+- name: Create registry config directory
   file:
-    path: /etc/containerd
+    path: "/etc/containerd/certs.d/{{ registry_ip }}:5000"
     state: directory
+    mode: '0755'
 
-- name: Enable and start containerd
-  systemd:
-    name: containerd
-    enabled: true
-    state: started
-
-- name: Generate default containerd config
-  command: containerd config default
-  register: containerd_config
-  changed_when: false
-
-- name: Write containerd config
+- name: Configure insecure registry
   copy:
-    dest: /etc/containerd/config.toml
-    content: "{{ containerd_config.stdout }}"
-  notify: restart containerd
+    dest: "/etc/containerd/certs.d/{{ registry_ip }}:5000/hosts.toml"
+    content: |
+      server = "http://{{ registry_ip }}:5000"
 
-- name: Enable SystemdCgroup for Kubernetes
-  replace:
-    path: /etc/containerd/config.toml
-    regexp: 'SystemdCgroup = false'
-    replace: 'SystemdCgroup = true'
+      [host."http://{{ registry_ip }}:5000"]
+        capabilities = ["pull", "resolve"]
+        plain_http = true
   notify: restart containerd
