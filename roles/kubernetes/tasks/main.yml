@@ -1,13 +1,76 @@
-- import_tasks: rocky.yml
-  when: ansible_os_family == "RedHat"
+- name: Check if cluster already initialized
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: kubeadm_init_file
+  when: "'master' in group_names"
 
-- import_tasks: ubuntu.yml
-  when: ansible_os_family == "Debian"     
 
-- name: Enable the kubelet service
-  systemd:
-    name: kubelet
-    enabled: yes
-    state: started   
+- name: Initialize Kubernetes cluster
+  command: kubeadm init --pod-network-cidr=10.244.0.0/16
+  when:
+    - "'master' in group_names"
+    - not kubeadm_init_file.stat.exists
+  become: yes
 
-- import_tasks: metallb.yml      
+
+- name: Wait for Kubernetes API
+  command: kubectl get nodes
+  register: api_ready
+  retries: 20
+  delay: 6
+  until: api_ready.rc == 0
+  when: "'master' in group_names"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+
+- name: Generate join command
+  command: kubeadm token create --print-join-command --kubeconfig /etc/kubernetes/admin.conf
+  register: join_command
+  when: "'master' in group_names"
+  run_once: true
+  become: yes
+
+
+############################################
+# WORKER RESET
+############################################
+
+- name: Reset kubeadm on workers
+  command: kubeadm reset -f
+  when: "'workers' in group_names"
+  become: yes
+
+
+- name: Remove old Kubernetes configuration
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/kubernetes
+    - /var/lib/kubelet
+  when: "'workers' in group_names"
+  become: yes
+
+
+############################################
+# CLEAN NODE FROM CLUSTER
+############################################
+
+- name: Remove node from cluster if exists
+  command: kubectl delete node {{ inventory_hostname }}
+  delegate_to: "{{ groups['master'][0] }}"
+  ignore_errors: true
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: "'workers' in group_names"
+
+
+############################################
+# JOIN
+############################################
+
+- name: Join worker nodes to cluster
+  command: "{{ hostvars[groups['master'][0]].join_command.stdout }}"
+  when: "'workers' in group_names"
+  become: yes

@@ -1,0 +1,45 @@
+- name: Initialize cluster and join workers
+  hosts: all
+  become: true
+
+  tasks:
+
+    - name: Check if cluster already initialized
+      stat:
+        path: /etc/kubernetes/admin.conf
+      register: kubeadm_init_file
+      when: "'master' in group_names"
+
+
+    - name: Initialize Kubernetes cluster
+      command: kubeadm init --pod-network-cidr=10.244.0.0/16
+      when:
+        - "'master' in group_names"
+        - not kubeadm_init_file.stat.exists
+
+
+    - name: Wait for Kubernetes API
+      wait_for:
+        port: 6443
+        timeout: 120
+      when: "'master' in group_names"
+
+
+    - name: Generate join command
+      command: kubeadm token create --print-join-command
+      register: join_command
+      when: "'master' in group_names"
+
+
+    - name: Check if node already joined
+      stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubelet_conf
+      when: "'workers' in group_names"
+
+
+    - name: Join worker nodes
+      command: "{{ hostvars[groups['master'][0]].join_command.stdout }}"
+      when:
+        - "'workers' in group_names"
+        - not kubelet_conf.stat.exists
