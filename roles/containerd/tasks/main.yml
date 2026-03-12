@@ -19,4 +19,9 @@
       [host."http://{{ registry_ip }}:5000"]
         capabilities = ["pull", "resolve"]
         plain_http = true
-  notify: restart containerd
+
+- name: Restart containerd
+  systemd:
+    name: containerd
+    state: restarted
+    enabled: yes

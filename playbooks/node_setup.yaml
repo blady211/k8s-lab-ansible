@@ -3,11 +3,11 @@
   become: true
 
   roles:
-    #- role: common
-    #  tags: common
+    - role: common
+      tags: common
 
-        #- role: kernel
-        # tags: kernel
+    - role: kernel
+      tags: kernel
 
     - role: containerd
       tags: containerd
