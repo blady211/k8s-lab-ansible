@@ -17,6 +17,8 @@
   command: /tmp/get_helm.sh
   args:
     creates: /usr/local/bin/helm
+  environment:
+    PATH: "/usr/local/bin:/usr/bin:/bin"
   when: helm_install_host_var
 
 - name: Add Prometheus Helm repo

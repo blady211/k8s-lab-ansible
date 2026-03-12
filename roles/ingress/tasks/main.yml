@@ -1,15 +1,18 @@
-- name: Instalacja NGINX Ingress
+- name: Install NGINX Ingress Controller
   command: kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/cloud/deploy.yaml
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
 
-- name: Sprawdzenie statusu NGINX Ingress Controller
+
+- name: Check status of NGINX Ingress services
   command: kubectl get svc -n ingress-nginx
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   register: nginx_ingress_status
 
-- name: Wyświetlenie statusu NGINX Ingress Controller
+
+- name: Show NGINX Ingress services
   debug:
     var: nginx_ingress_status.stdout
 
@@ -20,12 +23,13 @@
     dest: /tmp/ingress-wiki.yaml
 
 
-- name: Wait for ingress controller
-  command: kubectl -n ingress-nginx rollout status deployment ingress-nginx-controller
-  register: ingress_ready
-  retries: 20
-  delay: 10
-  until: ingress_ready.rc == 0
+- name: Wait for ingress controller pod
+  command: >
+    kubectl wait
+    --namespace ingress-nginx
+    --for=condition=ready pod
+    -l app.kubernetes.io/component=controller
+    --timeout=180s
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
 
@@ -35,15 +39,19 @@
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   register: ingress_apply
+  retries: 5
+  delay: 10
+  until: ingress_apply.rc == 0
+  changed_when: "'created' in ingress_apply.stdout or 'configured' in ingress_apply.stdout"
 
 
-- name: Sprawdzenie statusu Ingress
+- name: Check ingress status
   command: kubectl get ingress -n wiki
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
   register: ingress_status
 
 
-- name: Wyświetlenie statusu Ingress
+- name: Show ingress status
   debug:
     var: ingress_status.stdout
