@@ -1,1 +1,0 @@
-helm_install_host_var: "{{ 'master' in group_names }}"
