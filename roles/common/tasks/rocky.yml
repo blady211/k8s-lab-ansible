@@ -11,4 +11,5 @@
       - wget
       - git
       - bash-completion
+      - openssl
     state: present
