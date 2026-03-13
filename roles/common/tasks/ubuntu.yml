@@ -20,4 +20,5 @@
       - ca-certificates
       - software-properties-common
       - bash-completion
+      - openssl
     state: present
