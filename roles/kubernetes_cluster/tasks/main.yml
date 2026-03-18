@@ -1,0 +1,45 @@
+- name: Install Calico network plugin on Kubernetes cluster
+  command: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+  when: "'master' in group_names"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Wait for node to be Ready
+  command: kubectl get nodes --no-headers
+  register: node_status
+  retries: 30
+  delay: 6
+  until: node_status.stdout is search(" Ready ")
+  changed_when: false
+  when: "'master' in group_names"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Display node status
+  debug:
+    msg: "{{ node_status.stdout }}"
+  when: "'master' in group_names"
+
+
+- import_tasks: metallb.yml
+  when: "'master' in group_names
+
+  
+
+
+
+
+
+- name: Generate token for workers to join the cluster
+  command: kubeadm token create --print-join-command
+  register: join_command
+  when: "'master' in group_names"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Save join command to a file
+  copy:
+    content: "{{ join_command.stdout }}"
+    dest: /tmp/join_command.sh
+    mode: '0755'
+  when: "'master' in group_names"
