@@ -19,9 +19,14 @@
       [host."http://{{ registry_ip }}:5000"]
         capabilities = ["pull", "resolve"]
         plain_http = true
+  register: registry_config      
 
 - name: Restart containerd
   systemd:
     name: containerd
     state: restarted
     enabled: yes
+  when:
+    - "'workers' in group_names"
+      or
+    - "'master in group_names and registry_config.changed"
