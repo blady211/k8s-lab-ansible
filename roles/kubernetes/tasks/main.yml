@@ -67,7 +67,6 @@
   delay: 6
   until: api_ready.rc == 0
   changed_when: false
-  failed_when: false
   when: "'master' in group_names"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
