@@ -7,12 +7,3 @@
   apt_repository:
     repo: "deb https://pkgs.k8s.io/core:/stable:/v1.29/deb/ /"
     state: present
-
-- name: Install Kubernetes packages
-  apt:
-    name:
-      - kubelet
-      - kubeadm
-      - kubectl
-    state: present
-    update_cache: yes
