@@ -14,6 +14,9 @@
     
     - role: kubernetes
       tags: kubernetes    
+    
+    - role: kubernetes_cluster
+      tags: kubernetes_cluster    
 
     - role: registry
       when: "'registry' in group_names"

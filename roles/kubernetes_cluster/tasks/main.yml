@@ -1,9 +1,28 @@
-- name: Install Calico network plugin on Kubernetes cluster
-  command: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.27.0/manifests/calico.yaml
+- name: Copy Calico manifest (VXLAN)
+  copy:
+    src: calico.yaml
+    dest: /tmp/calico.yaml
+  when: "'master' in group_names"
+
+- name: Apply Calico
+  command: kubectl apply -f /tmp/calico.yaml
   when: "'master' in group_names"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
 
+# --- WAIT NA CALICO ---
+- name: Wait for Calico pods to be Running
+  command: kubectl get pods -n kube-system
+  register: calico_status
+  retries: 30
+  delay: 5
+  until: calico_status.stdout is search("calico-node") and calico_status.stdout is search("Running")
+  changed_when: false
+  when: "'master' in group_names"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+# --- WAIT NA NODE READY ---
 - name: Wait for node to be Ready
   command: kubectl get nodes --no-headers
   register: node_status
@@ -20,8 +39,41 @@
     msg: "{{ node_status.stdout }}"
   when: "'master' in group_names"
 
-
-- import_tasks: metallb.yml
+# --- GENERATE JOIN ---
+- name: Generate join command
+  command: kubeadm token create --print-join-command
+  register: join_command_raw
   when: "'master' in group_names"
 
+# --- SAVE DO HOSTVARS ---
+- name: Set join command fact
+  set_fact:
+    kube_join_cmd: "{{ join_command_raw.stdout }}"
+  when: "'master' in group_names"
 
+# --- DEBUG (opcjonalnie)
+- name: Show join command
+  debug:
+    msg: "{{ kube_join_cmd }}"
+  when: "'master' in group_names"
+
+# --- JOIN WORKERS ---
+- name: Join workers to cluster
+  command: "{{ hostvars[groups['master'][0]].kube_join_cmd }} --ignore-preflight-errors=all"
+  when: "'workers' in group_names"
+
+# --- WAIT NA WORKERS ---
+- name: Wait for all nodes to be Ready
+  command: kubectl get nodes --no-headers
+  register: all_nodes
+  retries: 30
+  delay: 6
+  until: all_nodes.stdout_lines | select("search", "Ready") | list | length >= groups['all'] | length
+  changed_when: false
+  when: "'master' in group_names"
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+# --- METALLB ---
+- import_tasks: metallb.yml
+  when: "'master' in group_names"
