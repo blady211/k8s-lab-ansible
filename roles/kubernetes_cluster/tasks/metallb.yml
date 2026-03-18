@@ -5,7 +5,7 @@
   ignore_errors: true
   changed_when: false
   environment:
-    KUBECONFIG: /home/ansible/.kube/config
+    KUBECONFIG: /etc/kubernetes/admin.conf
 
 
 # Kopiujemy manifest instalacyjny MetalLB
@@ -22,7 +22,7 @@
   command: kubectl apply -f /tmp/metallb-install.yaml
   when: metallb_ns.rc != 0
   environment:
-    KUBECONFIG: /home/ansible/.kube/config
+    KUBECONFIG: /etc/kubernetes/admin.conf
 
 
 # NOWY TASK — czekamy aż controller będzie gotowy
@@ -33,7 +33,7 @@
   delay: 6
   until: metallb_wait.rc == 0
   environment:
-    KUBECONFIG: /home/ansible/.kube/config
+    KUBECONFIG: /etc/kubernetes/admin.conf
 
 
 # Generujemy konfigurację MetalLB
@@ -47,4 +47,4 @@
 - name: Apply MetalLB config
   command: kubectl apply -f /tmp/metallb-config.yaml
   environment:
-    KUBECONFIG: /home/ansible/.kube/config
+    KUBECONFIG: /etc/kubernetes/admin.conf
