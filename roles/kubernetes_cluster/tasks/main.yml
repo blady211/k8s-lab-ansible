@@ -23,12 +23,16 @@
     KUBECONFIG: /etc/kubernetes/admin.conf
 
 # --- WAIT NA NODE READY ---
-- name: Wait for node to be Ready
+- name: Wait for all nodes to be Ready
   command: kubectl get nodes --no-headers
-  register: node_status
+  register: all_nodes
   retries: 30
   delay: 6
-  until: node_status.stdout is search(" Ready ")
+  until: >
+    all_nodes.stdout_lines | length > 0 and
+    (all_nodes.stdout_lines | select("search", " Ready ") | list | length)
+    ==
+    (all_nodes.stdout_lines | length)
   changed_when: false
   when: "'master' in group_names"
   environment:
@@ -57,10 +61,21 @@
     msg: "{{ kube_join_cmd }}"
   when: "'master' in group_names"
 
-# --- JOIN WORKERS ---
+# --- JOIN WORKERS --- to dzialalo ale dalem nowy z warunkiem ktory umozliwi drugi run tego taska - do testu to jest
+#- name: Join workers to cluster
+#  command: "{{ hostvars[groups['master'][0]].kube_join_cmd }} --ignore-preflight-errors=all"
+#  when: "'workers' in group_names"
+
+- name: Check if node already joined
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf
+
 - name: Join workers to cluster
   command: "{{ hostvars[groups['master'][0]].kube_join_cmd }} --ignore-preflight-errors=all"
-  when: "'workers' in group_names"
+  when:
+    - "'workers' in group_names"
+    - not kubelet_conf.stat.exists
 
 # --- WAIT NA WORKERS ---
 - name: Wait for all nodes to be Ready
