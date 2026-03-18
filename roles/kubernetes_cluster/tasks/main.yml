@@ -22,7 +22,7 @@
 
 
 - import_tasks: metallb.yml
-  when: "'master' in group_names
+  when: "'master' in group_names"
 
   
 
