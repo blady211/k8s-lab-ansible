@@ -1,16 +1,63 @@
+- import_tasks: rocky.yml
+  when: ansible_os_family == "RedHat"
+
+- import_tasks: ubuntu.yml
+  when: ansible_os_family == "Debian"
+
+- name: Install kubeadm, kubelet and kubectl on all nodes
+  package:
+    name:
+      - kubeadm
+      - kubelet
+      - kubectl
+    state: present
+
+- name: Enable kubelet
+  systemd:
+    name: kubelet
+    enabled: yes
+    state: started
+
 - name: Check if cluster already initialized
   stat:
     path: /etc/kubernetes/admin.conf
   register: kubeadm_init_file
   when: "'master' in group_names"
+  changed_when: false
 
-
-- name: Initialize Kubernetes cluster
+- name: Initialize Kubernetes cluster for master node
   command: kubeadm init --pod-network-cidr=10.244.0.0/16
   when:
     - "'master' in group_names"
     - not kubeadm_init_file.stat.exists
-  become: yes
+
+- name: Re-check if cluster initialized
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: kubeadm_init_file
+  when: "'master' in group_names"
+  changed_when: false
+
+- name: Create .kube directory for master node
+  file:
+    path: /home/ansible/.kube
+    state: directory
+    mode: '0700'
+    owner: ansible
+    group: ansible
+  when: "'master' in group_names"
+
+- name: Copy admin.conf to .kube/config for master node
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: /home/ansible/.kube/config
+    remote_src: yes
+    owner: ansible
+    group: ansible
+    mode: '0600'
+  when: 
+    - "'master' in group_names"
+    - kubeadm_init_file.stat.exists
 
 
 - name: Wait for Kubernetes API
@@ -19,57 +66,8 @@
   retries: 20
   delay: 6
   until: api_ready.rc == 0
+  changed_when: false
+  failed_when: false
   when: "'master' in group_names"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf
-
-
-- name: Generate join command
-  command: kubeadm token create --print-join-command --kubeconfig /etc/kubernetes/admin.conf
-  register: join_command
-  delegate_to: "{{ groups['master'][0] }}"
-  run_once: true
-  become: yes
-
-############################################
-# WORKER RESET
-############################################
-
-- name: Reset kubeadm on workers
-  command: kubeadm reset -f
-  when: "'workers' in group_names"
-  become: yes
-
-
-- name: Remove old Kubernetes configuration
-  file:
-    path: "{{ item }}"
-    state: absent
-  loop:
-    - /etc/kubernetes
-    - /var/lib/kubelet
-  when: "'workers' in group_names"
-  become: yes
-
-
-############################################
-# CLEAN NODE FROM CLUSTER
-############################################
-
-- name: Remove node from cluster if exists
-  command: kubectl delete node {{ inventory_hostname }}
-  delegate_to: "{{ groups['master'][0] }}"
-  ignore_errors: true
-  environment:
-    KUBECONFIG: /etc/kubernetes/admin.conf
-  when: "'workers' in group_names"
-
-
-############################################
-# JOIN
-############################################
-
-- name: Join worker nodes to cluster
-  command: "{{ hostvars[groups['master'][0]]['join_command']['stdout'] }}"
-  when: "'workers' in group_names"
-  become: yes
