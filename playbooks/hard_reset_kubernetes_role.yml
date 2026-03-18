@@ -1,0 +1,86 @@
+- name: Hard reset Kubernetes (master + workers)
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  vars:
+    cni_interfaces:
+      - cni0
+      - flannel.1
+      - cali0
+
+    k8s_dirs:
+      - /etc/kubernetes
+      - /var/lib/etcd
+      - /var/lib/kubelet
+
+    cni_dirs:
+      - /etc/cni/net.d
+      - /var/lib/cni
+
+    kubeconfigs:
+      - /root/.kube
+      - /home/ansible/.kube
+
+  tasks:
+
+    # --- kubelet ---
+    - name: Stop kubelet
+      systemd:
+        name: kubelet
+        state: stopped
+      ignore_errors: yes
+
+    # --- kubeadm ---
+    - name: kubeadm reset (best-effort)
+      command: kubeadm reset -f
+      ignore_errors: yes
+
+    # --- katalogi K8s ---
+    - name: Remove Kubernetes directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ k8s_dirs }}"
+      ignore_errors: yes
+
+    # --- CNI ---
+    - name: Remove CNI directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ cni_dirs }}"
+      ignore_errors: yes
+
+    - name: Remove CNI interfaces
+      command: ip link delete {{ item }}
+      loop: "{{ cni_interfaces }}"
+      ignore_errors: yes
+
+    # --- iptables (lab only) ---
+    - name: Flush iptables rules
+      command: iptables -F
+      ignore_errors: yes
+
+    # --- kubeconfig (users) ---
+    - name: Remove kubeconfig directories
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop: "{{ kubeconfigs }}"
+      ignore_errors: yes
+
+    # --- pakiety K8s ---
+    - name: Remove Kubernetes packages (optional hard reset)
+      package:
+        name:
+          - kubeadm
+          - kubelet
+          - kubectl
+        state: absent
+      ignore_errors: yes
+
+    # --- sprzątanie systemd ---
+    - name: Reload systemd daemon
+      command: systemctl daemon-reexec
+      ignore_errors: yes
