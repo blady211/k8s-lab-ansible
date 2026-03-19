@@ -4,7 +4,9 @@
     state: present
 
 - name: Add Docker repository
-  command: dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  get_url:
+    url: https://download.docker.com/linux/centos/docker-ce.repo
+    dest: /etc/yum.repos.d/docker-ce.repo
 
 - name: Install Docker
   dnf:
@@ -13,6 +15,7 @@
       - docker-ce-cli
       - containerd.io
     state: present
+    
 - name: Start and enable Docker service
   systemd:
     name: docker
@@ -40,10 +43,7 @@
       {
         "insecure-registries": ["192.168.0.101:5000"]
       }
-- name: Restart Docker
-  service:
-    name: docker
-    state: restarted
+  notify: restart docker
 
 - name: Create registry data directory
   file:
@@ -63,6 +63,16 @@
       - "5000:5000"
     volumes:
       - /opt/registry/data:/var/lib/registry
+
+- name: Wait for registry
+  uri:
+    url: http://192.168.0.101:5000/v2/_catalog
+    method: GET
+    status_code: 200
+  register: registry_check
+  retries: 10
+  delay: 3
+  until: registry_check.status == 200
 
 - name: Check registry
   uri:
