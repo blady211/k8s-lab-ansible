@@ -61,7 +61,7 @@
     msg: "{{ kube_join_cmd }}"
   when: "'master' in group_names"
 
- --- JOIN WORKERS --- to dzialalo ale dalem nowy z warunkiem ktory umozliwi drugi run tego taska - do testu to jest
+# --- JOIN WORKERS --- to dzialalo ale dalem nowy z warunkiem ktory umozliwi drugi run tego taska - do testu to jest
 - name: Join workers to cluster
   command: "{{ hostvars[groups['master'][0]].kube_join_cmd }} --ignore-preflight-errors=all"
   when: "'workers' in group_names"
