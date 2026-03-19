@@ -61,10 +61,37 @@
     msg: "{{ kube_join_cmd }}"
   when: "'master' in group_names"
 
-# --- JOIN WORKERS ---
+# --- JOIN WORKERS --- Stary dzialajacy ale przy kolejnym RUNie sie wysypie
+#- name: Join workers to cluster
+#  command: "{{ hostvars[groups['master'][0]].kube_join_cmd }} --ignore-preflight-errors=all"
+#  when: "'workers' in group_names"
+
+# --- JOIN WORKERS (IDEMPOTENT) ---
+
+# NOWE — sprawdzamy czy node już jest w clusterze
+- name: Check if node already joined
+  stat:
+    path: /etc/kubernetes/kubelet.conf
+  register: kubelet_conf
+
+
+#  POPRAWIONE — join tylko jeśli node NIE jest w clusterze
 - name: Join workers to cluster
   command: "{{ hostvars[groups['master'][0]].kube_join_cmd }} --ignore-preflight-errors=all"
-  when: "'workers' in group_names"
+  when:
+    - "'workers' in group_names"
+    - not kubelet_conf.stat.exists
+    - hostvars[groups['master'][0]].kube_join_cmd is defined
+
+
+#  NOWE (opcjonalne — lepsze logi)
+- name: Skip join (already part of cluster)
+  debug:
+    msg: "Node already joined, skipping"
+  when:
+    - "'workers' in group_names"
+    - kubelet_conf.stat.exists
+
 
 # --- WAIT NA WORKERS ---
 - name: Wait for all nodes to be Ready
