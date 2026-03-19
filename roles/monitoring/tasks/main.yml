@@ -1,3 +1,11 @@
+- name: Add Helm repo
+  command: /usr/local/bin/helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+  changed_when: false
+
+- name: Update Helm repo
+  command: /usr/local/bin/helm repo update
+  changed_when: false
+
 - name: Check existing Helm releases
   command: /usr/local/bin/helm list -n monitoring -q
   register: helm_releases
@@ -21,5 +29,30 @@
   when: "'monitoring' in helm_releases.stdout"
   environment:
     KUBECONFIG: /etc/kubernetes/admin.conf 
+
+
+# --- WAIT on GRAFANa --
+- name: Wait for Grafana deployment
+  command: kubectl -n monitoring rollout status deployment monitoring-grafana
+  register: grafana_ready
+  retries: 30
+  delay: 10
+  until: grafana_ready.rc == 0
+  changed_when: false
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+
+# --- WAIT on PROMETHEUS ---
+- name: Wait for Prometheus pods
+  command: kubectl get pods -n monitoring
+  register: prometheus_ready
+  retries: 30
+  delay: 10
+  until: prometheus_ready.stdout is search("Running")
+  changed_when: false
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
 
 - import_tasks: ingress_monitoring.yml 
