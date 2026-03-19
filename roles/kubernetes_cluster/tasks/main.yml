@@ -40,7 +40,7 @@
 
 - name: Display node status
   debug:
-    msg: "{{ node_status.stdout }}"
+    msg: "{{ all_nodes.stdout }}"
   when: "'master' in group_names"
 
 # --- GENERATE JOIN ---
@@ -61,11 +61,10 @@
     msg: "{{ kube_join_cmd }}"
   when: "'master' in group_names"
 
-# --- JOIN WORKERS --- to dzialalo ale dalem nowy z warunkiem ktory umozliwi drugi run tego taska - do testu to jest
+# --- JOIN WORKERS ---
 - name: Join workers to cluster
   command: "{{ hostvars[groups['master'][0]].kube_join_cmd }} --ignore-preflight-errors=all"
   when: "'workers' in group_names"
-
 
 # --- WAIT NA WORKERS ---
 - name: Wait for all nodes to be Ready
@@ -73,7 +72,11 @@
   register: all_nodes
   retries: 30
   delay: 6
-  until: all_nodes.stdout_lines | select("search", "Ready") | list | length >= groups['all'] | length
+  until: >
+    all_nodes.stdout_lines | length > 0 and
+    (all_nodes.stdout_lines | select("search", " Ready ") | list | length)
+    ==
+    (all_nodes.stdout_lines | length)
   changed_when: false
   when: "'master' in group_names"
   environment:
