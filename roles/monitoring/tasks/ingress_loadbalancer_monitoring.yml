@@ -1,0 +1,57 @@
+# --- SET LOADBALANCER ---
+- name: Set ingress controller to LoadBalancer
+  command: >
+    kubectl patch svc ingress-nginx-controller -n ingress-nginx
+    -p '{"spec": {"type": "LoadBalancer"}}'
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+# --- WAIT FOR EXTERNAL IP ---
+- name: Wait for ingress external IP
+  command: kubectl get svc ingress-nginx-controller -n ingress-nginx
+  register: ingress_ip_raw
+  retries: 30
+  delay: 5
+  until: ingress_ip_raw.stdout is not search("<pending>")
+  changed_when: false
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+
+- name: Extract ingress external IP
+  set_fact:
+    ingress_ip: "{{ ingress_ip_raw.stdout_lines[1].split()[3] }}"
+
+
+
+- name: Get Grafana admin password
+  command: >
+    kubectl get secret monitoring-grafana -n monitoring
+    -o jsonpath="{.data.admin-password}"
+  register: grafana_pass_raw
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  changed_when: false
+
+- name: Decode Grafana password
+  set_fact:
+    grafana_password: "{{ grafana_pass_raw.stdout | b64decode }}"
+
+- name: Show monitoring access summary
+  debug:
+    msg:
+      - "================================"
+      - "MONITORING ACCESS"
+      - ""
+      - "Add to /etc/hosts:"
+      - "{{ ingress_ip }} grafana.lab"
+      - "{{ ingress_ip }} prometheus.lab"
+      - ""
+      - "Grafana:     http://grafana.lab"
+      - "Prometheus:  http://prometheus.lab"
+      - ""
+      - "Grafana login:"
+      - "user: admin"
+      - "password: {{ grafana_password }}"
+      - "================================"      

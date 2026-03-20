@@ -1,0 +1,8 @@
+- name: Configure infrastructure for all nodes
+  hosts: all
+  become: true
+
+  roles:
+    - role: monitoring
+      tags: monitoring
+      when: "'master' in group_names"
